@@ -3,16 +3,6 @@
 ## Overview
 This project involves creating a C++ program that simulates 5 CPU scheduling algorithms for a uniprocessor system. The simulator examines a ready queue and selects processes for execution based on specific algorithm rules.
 
-## Grouping
-* **Members:** 2 to 3 members per group.
-* **Defense:** Onsite defense with major and minor questions.
-
-## Scoring
-* **Base Score:** 60 points for a working program.
-* **Test Cases:** 10 to 11 test cases provided. (-5 points per incorrect/lacking test case).
-* **Defense:** 2 major questions (20 points each) + variable minor questions.
-* **Peer Eval:** Individual scores adjusted based on peer evaluation.
-
 ## Supported Algorithms
 1.  **FCFS** — First Come First Served
 2.  **SJF** — Shortest Job First (non-preemptive)
