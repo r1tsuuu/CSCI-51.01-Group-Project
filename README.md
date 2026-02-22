@@ -3,6 +3,16 @@
 ## Overview
 This project involves creating a C++ program that simulates 5 CPU scheduling algorithms for a uniprocessor system. The simulator examines a ready queue and selects processes for execution based on specific algorithm rules.
 
+## How to Run
+
+To run the program, compile `main.cpp` and provide **input.txt** as the program input.  
+The simulator reads all required data from `input.txt`.
+
+**Example (g++):**
+```bash
+g++ main.cpp -o scheduler
+./scheduler < input.txt
+
 ## Supported Algorithms
 1.  **FCFS** — First Come First Served
 2.  **SJF** — Shortest Job First (non-preemptive)
