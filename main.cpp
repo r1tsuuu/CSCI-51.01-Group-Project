@@ -93,9 +93,69 @@ void print_results(int test_case_number, const string& algo_name,
 
 // --- ALGORITHMS ---
 
+//check which process goes first (for fcfs)
+    bool arrivalFCFS(const Process& a, const Process& b){
+        if (a.arrival_time < b.arrival_time){
+            return true;
+        }
+        else if (a.arrival_time > b.arrival_time){
+            return false;
+        }
+        else {
+            if (a.id < b.id){
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+    }
+
 void simulate_FCFS(vector<Process>& processes, int test_case_number) {
     // TODO: Implement First Come First Served
-    // Hint: Sort processes by arrival time first, then execute sequentially.
+
+    //https://en.cppreference.com/w/cpp/algorithm/sort.html
+    sort(processes.begin(), processes.end(), arrivalFCFS);
+
+    int current_time = 0;
+    int completed_count = 0;
+    int n = processes.size();
+
+    vector<Block> gantt_chart;
+    int total_burst_time = 0;
+    int idle_time = 0;
+
+    // keep working till finish the amount
+    for (int i = 0; i < n; i++){
+        Process &p = processes[i];
+
+        // idle time where machine is waiting for next process
+        if (current_time < p.arrival_time) {
+            int idle = p.arrival_time - current_time;
+            idle_time = idle_time + idle;
+            current_time = p.arrival_time;
+        }
+
+        //response time
+        p.start_time = current_time;
+        p.response_time = p.start_time - p.arrival_time;
+
+        //gantt block stuff
+        Block temp;
+        temp.start_time = current_time;
+        temp.process_id = p.id;
+        temp.duration = p.burst_time;
+        temp.is_completed = true;
+        gantt_chart.push_back(temp);
+
+        //update variables of overall system processor thingy and each process
+        current_time = current_time + p.burst_time;
+        total_burst_time = total_burst_time + p.burst_time;
+        p.completion_time = current_time;
+        p.turnaround_time = p.completion_time - p.arrival_time;
+        p.waiting_time = p.turnaround_time - p.burst_time;
+    }
+    print_results(test_case_number, "FCFS", gantt_chart, processes, current_time, total_burst_time, idle_time);
 }
 
 void simulate_SJF(vector<Process>& processes, int test_case_number) {
