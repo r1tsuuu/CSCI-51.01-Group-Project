@@ -305,9 +305,83 @@ void simulate_SRTF(vector<Process>& processes, int test_case_number) {
 }
 
 void simulate_Priority(vector<Process>& processes, int test_case_number) {
-    // TODO: Implement Priority (Preemptive)
-    // Hint: Look at nice_level instead of remaining_time. Remember it's preemptive.
+    // initialization
+    int current_time = 0;
+    int completed_count = 0;
+    int n = processes.size();
+
+    vector<Block> gantt_chart;
+    int total_burst_time = 0;
+    int idle_time = 0;
+
+    int prev_id = -1;
+    int block_start_time = 0;
+    
+    //find best process to run (most not nice)
+    while (completed_count < n){
+        int bestIndex = -1;
+        int minNice = 2100000000; //placeholder value
+
+        for (int i = 0; i < n; i++){
+            if (processes[i].arrival_time <= current_time && processes[i].remaining_time > 0){
+                if (processes[i].nice_level < minNice){
+                    minNice = processes[i].nice_level;
+                    bestIndex = i;
+                }
+                //tie breaker
+                else if (processes[i].nice_level == minNice){
+                    if (bestIndex == -1 || processes[i].arrival_time < processes[bestIndex].arrival_time){
+                        bestIndex = i;
+                    }
+                }
+            }
+        }
+        
+        //gantt chart
+        if (bestIndex != -1) {
+
+            Process &p = processes[bestIndex];
+
+            if (bestIndex != prev_id) {
+                if (prev_id != -1 && processes[prev_id].remaining_time > 0) {
+                    gantt_chart.push_back({block_start_time, processes[prev_id].id, current_time - block_start_time, false});
+                }
+                
+                block_start_time = current_time;
+                prev_id = bestIndex;
+
+                if (!p.is_started) {
+                    p.start_time = current_time;
+                    p.is_started = true;
+                }
+            }
+            p.remaining_time--;
+            current_time++;
+            total_burst_time++;
+
+            if (p.remaining_time == 0) {
+                gantt_chart.push_back({block_start_time, p.id, current_time - block_start_time, true});
+                
+                //calculate metrics
+                p.completion_time = current_time;
+                p.turnaround_time = p.completion_time - p.arrival_time;
+                p.waiting_time = p.turnaround_time - p.burst_time;
+                p.response_time = p.start_time - p.arrival_time;
+                
+                completed_count++;
+                prev_id = -1; // reset so next process is fresh
+            }
+        } else {
+            // idle time
+            current_time++;
+            idle_time++;
+            block_start_time = current_time; 
+            prev_id = -1;
+        }
+    }
+    print_results(test_case_number, "P", gantt_chart, processes, current_time, total_burst_time, idle_time);
 }
+
 
 void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) {
     // TODO: Implement Round Robin
