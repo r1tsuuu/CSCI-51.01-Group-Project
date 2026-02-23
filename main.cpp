@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 #include <iomanip>
+#include <algorithm>
+#include <deque>
 
 using namespace std;
 
