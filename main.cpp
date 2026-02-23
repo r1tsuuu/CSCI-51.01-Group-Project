@@ -404,12 +404,14 @@ void simulate_Priority(vector<Process>& processes, int test_case_number) {
 
 
 void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) {
+    // sort processes by arrival time, then by nice level for tie-breaking
     sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
         if (a.arrival_time != b.arrival_time) return a.arrival_time < b.arrival_time;
         return a.nice_level < b.nice_level; 
     });
 
     deque<Process*> ready_q;
+    vector<Process*> current_burst_arrivals;
     vector<Block> gantt_chart;
     
     // Setup metrics
@@ -421,55 +423,90 @@ void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) 
     int total_burst_time = 0;
     int idle_time = 0;
 
+    // CPU State tracking
+    Process* active_process = nullptr;
+    int current_quantum_used = 0;
+    int current_block_start = 0;
+
     while (completed_count < n) {
-        // Calculate next arrival time if no processes are ready
-        if (ready_q.empty() && process_idx < n && processes[process_idx].arrival_time > elapsed_time) {
-            idle_time += (processes[process_idx].arrival_time - elapsed_time);
-            elapsed_time = processes[process_idx].arrival_time;
-        }
-        // Get new arrivals
-        vector<Process*> new_arrivals;
-        while (process_idx < n && processes[process_idx].arrival_time <= elapsed_time) {
-            new_arrivals.push_back(&processes[process_idx]);
+        // Handle arrivals at current ns
+        while (process_idx < n && processes[process_idx].arrival_time == elapsed_time) {
+            if (active_process != nullptr) {
+                // CPU is busy, buffer its arrival
+                current_burst_arrivals.push_back(&processes[process_idx]);
+            } else {
+                // CPU is idle, push straight to the ready queue
+                ready_q.push_back(&processes[process_idx]);
+            }
             process_idx++;
         }
-        // Add new arrivals to ready queue
-        for (auto it = new_arrivals.rbegin(); it != new_arrivals.rend(); ++it) {
-            ready_q.push_front(*it);
+
+        // Assign a process to the CPU if it's currently idle and the queue has waiting processes
+        if (active_process == nullptr && !ready_q.empty()) {
+            active_process = ready_q.front();
+            ready_q.pop_front();
+            
+            current_quantum_used = 0;
+            current_block_start = elapsed_time;
+            
+            if (!active_process->is_started) {
+                active_process->start_time = elapsed_time;
+                active_process->is_started = true;
+            }
         }
 
-        if (!ready_q.empty()) {
-            Process* p = ready_q.front();
-            ready_q.pop_front();
+        // Simulate 1ns
+        if (active_process != nullptr) {
+            active_process->remaining_time--;
+            current_quantum_used++;
+            total_burst_time++;
+            elapsed_time++; // Move time forward by 1ns
 
-            int time_spent = min(quantum, p->remaining_time);
-            gantt_chart.push_back({elapsed_time, p->id, time_spent, (p->remaining_time - time_spent <= 0)});
-            
-            p->start_time = (p->is_started) ? p->start_time : elapsed_time;
-            p->remaining_time -= time_spent;
-            elapsed_time += time_spent;
-            total_burst_time += time_spent;
+            // Check conditions after 1ns of execution
+            bool is_complete = (active_process->remaining_time == 0);
+            bool quantum_expired = (current_quantum_used == quantum);
 
-            bool is_complete = (p->remaining_time <= 0);
-            vector<Process*> mid_run_arrivals;
-            while (process_idx < n && processes[process_idx].arrival_time <= elapsed_time) {
-                mid_run_arrivals.push_back(&processes[process_idx]);
-                process_idx++;
+            if (is_complete || quantum_expired) {
+                // Fetch new arrivals
+                while (process_idx < n && processes[process_idx].arrival_time == elapsed_time) {
+                    current_burst_arrivals.push_back(&processes[process_idx]);
+                    process_idx++;
+                }
+
+                // Push new arrivals to front of ready queue
+                for (auto it = current_burst_arrivals.rbegin(); it != current_burst_arrivals.rend(); ++it) {
+                    ready_q.push_front(*it);
+                }
+                current_burst_arrivals.clear(); // Clear buffer for the next quantum
+
+                // Log the execution block to the Gantt chart
+                gantt_chart.push_back({
+                    current_block_start, 
+                    active_process->id, 
+                    elapsed_time - current_block_start, 
+                    is_complete
+                });
+
+                if (is_complete) {
+                    completed_count++;
+                    
+                    // Calculate metrics
+                    active_process->completion_time = elapsed_time;
+                    active_process->turnaround_time = active_process->completion_time - active_process->arrival_time;
+                    active_process->waiting_time = active_process->turnaround_time - active_process->burst_time;
+                    active_process->response_time = active_process->start_time - active_process->arrival_time;
+                } else {
+                    // Process is preempted
+                    ready_q.push_back(active_process);
+                }
+                
+                // Clear active process for next iteration
+                active_process = nullptr; 
             }
-            for (auto it = mid_run_arrivals.rbegin(); it != mid_run_arrivals.rend(); ++it) {
-                ready_q.push_front(*it);
-            }
-            if (is_complete) {
-                completed_count++;
-                // Calculate metrics
-                p->completion_time = elapsed_time;
-                p->turnaround_time = p->completion_time - p->arrival_time;
-                p->waiting_time = p->turnaround_time - p->burst_time;
-                p->response_time = p->start_time - p->arrival_time;
-            } else {
-                p->is_started = true;
-                ready_q.push_back(p);
-            }
+        } else {
+            // CPU is idle
+            idle_time++;
+            elapsed_time++;
         }
     }
     print_results(test_case_number, "RR", gantt_chart, processes, elapsed_time, total_burst_time, idle_time);
