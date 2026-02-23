@@ -67,24 +67,28 @@ void print_results(int test_case_number, const string& algo_name,
     cout << "Throughput: " << setprecision(15) << throughput << " processes/ns\n";
     
     // Metrics
+    vector<Process> sorted_processes = processes;
+    sort(sorted_processes.begin(), sorted_processes.end(), [](const Process& a, const Process& b) {
+        return a.id < b.id;
+    });
     double total_wait = 0, total_turnaround = 0, total_response = 0;
     
     cout << "Waiting times:\n";
-    for (const auto& p : processes) {
+    for (const auto& p : sorted_processes) {
         cout << " Process " << p.id << ": " << p.waiting_time << "ns\n";
         total_wait += p.waiting_time;
     }
     cout << "Average waiting time: " << (total_wait / processes.size()) << "ns\n";
     
     cout << "Turnaround times:\n";
-    for (const auto& p : processes) {
+    for (const auto& p : sorted_processes) {
         cout << " Process " << p.id << ": " << p.turnaround_time << "ns\n";
         total_turnaround += p.turnaround_time;
     }
     cout << "Average turnaround time: " << (total_turnaround / processes.size()) << "ns\n";
     
     cout << "Response times:\n";
-    for (const auto& p : processes) {
+    for (const auto& p : sorted_processes) {
         cout << " Process " << p.id << ": " << p.response_time << "ns\n";
         total_response += p.response_time;
     }
@@ -453,10 +457,6 @@ void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) 
             }
         }
     }
-    // Sort by ID for final output
-    sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
-        return a.id < b.id;
-    });
     print_results(test_case_number, "RR", gantt_chart, processes, elapsed_time, total_burst_time, idle_time);
 }
 
