@@ -3,6 +3,7 @@
 #include <string>
 #include <iomanip>
 #include <algorithm>
+#include <deque>
 
 using namespace std;
 
@@ -250,11 +251,80 @@ void simulate_Priority(vector<Process>& processes, int test_case_number) {
 }
 
 void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) {
-    // TODO: Implement Round Robin
-    // Hint: Use a std::queue<int> to hold process IDs. 
-    // Carefully handle the rule: "preempted processes are moved to the tail end".
-}
+    sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
+        if (a.arrival_time != b.arrival_time) return a.arrival_time < b.arrival_time;
+        return a.nice_level < b.nice_level; 
+    });
 
+    deque<Process*> ready_q;
+    vector<Block> gantt_chart;
+    
+    // Setup metrics
+    int elapsed_time = 0;
+    int completed_count = 0;
+    int process_idx = 0;
+    int n = processes.size();
+
+    int total_burst_time = 0;
+    int idle_time = 0;
+
+    while (completed_count < n) {
+        // Calculate next arrival time if no processes are ready
+        if (ready_q.empty() && process_idx < n && processes[process_idx].arrival_time > elapsed_time) {
+            idle_time += (processes[process_idx].arrival_time - elapsed_time);
+            elapsed_time = processes[process_idx].arrival_time;
+        }
+        // Get new arrivals
+        vector<Process*> new_arrivals;
+        while (process_idx < n && processes[process_idx].arrival_time <= elapsed_time) {
+            new_arrivals.push_back(&processes[process_idx]);
+            process_idx++;
+        }
+        // Add new arrivals to ready queue
+        for (auto it = new_arrivals.rbegin(); it != new_arrivals.rend(); ++it) {
+            ready_q.push_front(*it);
+        }
+
+        if (!ready_q.empty()) {
+            Process* p = ready_q.front();
+            ready_q.pop_front();
+
+            int time_spent = min(quantum, p->remaining_time);
+            gantt_chart.push_back({elapsed_time, p->id, time_spent, (p->remaining_time - time_spent <= 0)});
+            
+            p->start_time = (p->is_started) ? p->start_time : elapsed_time;
+            p->remaining_time -= time_spent;
+            elapsed_time += time_spent;
+            total_burst_time += time_spent;
+
+            bool is_complete = (p->remaining_time <= 0);
+            vector<Process*> mid_run_arrivals;
+            while (process_idx < n && processes[process_idx].arrival_time <= elapsed_time) {
+                mid_run_arrivals.push_back(&processes[process_idx]);
+                process_idx++;
+            }
+            for (auto it = mid_run_arrivals.rbegin(); it != mid_run_arrivals.rend(); ++it) {
+                ready_q.push_front(*it);
+            }
+            if (is_complete) {
+                completed_count++;
+                // Calculate metrics
+                p->completion_time = elapsed_time;
+                p->turnaround_time = p->completion_time - p->arrival_time;
+                p->waiting_time = p->turnaround_time - p->burst_time;
+                p->response_time = p->start_time - p->arrival_time;
+            } else {
+                p->is_started = true;
+                ready_q.push_back(p);
+            }
+        }
+    }
+    // Sort by ID for final output
+    sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
+        return a.id < b.id;
+    });
+    print_results(test_case_number, "RR", gantt_chart, processes, elapsed_time, total_burst_time, idle_time);
+}
 
 // --- MAIN FUNCTION & PARSER ---
 
