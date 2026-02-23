@@ -2,8 +2,6 @@
 #include <vector>
 #include <string>
 #include <iomanip>
-#include <algorithm>
-#include <deque>
 
 using namespace std;
 
@@ -121,7 +119,7 @@ void simulate_SJF(vector<Process>& processes, int test_case_number) {
                     min_burst = processes[i].burst_time;
                     shortest_index = i;
                 } 
-                // TIEBREAKER via FCFS: If two processes have the same burst time, choose the one that arrived first
+                // TIEBREAKER via FCFS
                 else if (processes[i].burst_time == min_burst) {
                     if (processes[i].arrival_time < processes[shortest_index].arrival_time) {
                         shortest_index = i;
@@ -188,7 +186,7 @@ void simulate_SRTF(vector<Process>& processes, int test_case_number) {
                     min_remaining = processes[i].remaining_time;
                     shortest_index = i;
                 } 
-                // TIEBREAKER via FCFS: If two processes have the same remaining time, choose the one that arrived first
+                // TIEBREAKER via FCFS
                 else if (processes[i].remaining_time == min_remaining) {
                     if (shortest_index == -1 || processes[i].arrival_time < processes[shortest_index].arrival_time) {
                         shortest_index = i;
@@ -326,7 +324,7 @@ void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) 
     print_results(test_case_number, "RR", gantt_chart, processes, elapsed_time, total_burst_time, idle_time);
 }
 
-// --- MAIN FUNCTION & PARSER ---
+// --- MAIN FUNCTION ---
 
 int main() {
     int num_test_cases;
