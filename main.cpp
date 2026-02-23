@@ -185,10 +185,15 @@ void simulate_SJF(vector<Process>& processes, int test_case_number) {
                     min_burst = processes[i].burst_time;
                     shortest_index = i;
                 } 
-                // TIEBREAKER via FCFS
+                // TIEBREAKER 
                 else if (processes[i].burst_time == min_burst) {
                     if (processes[i].arrival_time < processes[shortest_index].arrival_time) {
                         shortest_index = i;
+                    } 
+                    else if (processes[i].arrival_time == processes[shortest_index].arrival_time) {
+                        if (processes[i].id < processes[shortest_index].id) {
+                            shortest_index = i;
+                        }
                     }
                 }
             }
@@ -243,19 +248,24 @@ void simulate_SRTF(vector<Process>& processes, int test_case_number) {
     // Loop until all processes are marked as completed
     while (completed_count < n) {
         int shortest_index = -1;
-        int min_remaining = 1e9; // Start with an arbitrarily large number
+        int min_remaining = 1e9; 
         
         // Check queue to find the process with the shortest REMAINING time
         for (int i = 0; i < n; i++) {
             if (processes[i].arrival_time <= current_time && processes[i].remaining_time > 0) {
-                if (processes[i].remaining_time < min_remaining) {
+if (processes[i].remaining_time < min_remaining) {
                     min_remaining = processes[i].remaining_time;
                     shortest_index = i;
                 } 
-                // TIEBREAKER via FCFS
+                // TIEBREAKER
                 else if (processes[i].remaining_time == min_remaining) {
                     if (shortest_index == -1 || processes[i].arrival_time < processes[shortest_index].arrival_time) {
                         shortest_index = i;
+                    } 
+                    else if (processes[i].arrival_time == processes[shortest_index].arrival_time) {
+                        if (processes[i].id < processes[shortest_index].id) {
+                            shortest_index = i;
+                        }
                     }
                 }
             }
@@ -333,10 +343,15 @@ void simulate_Priority(vector<Process>& processes, int test_case_number) {
                     minNice = processes[i].nice_level;
                     bestIndex = i;
                 }
-                //tie breaker
+                // TIEBREAKER
                 else if (processes[i].nice_level == minNice){
                     if (bestIndex == -1 || processes[i].arrival_time < processes[bestIndex].arrival_time){
                         bestIndex = i;
+                    } 
+                    else if (processes[i].arrival_time == processes[bestIndex].arrival_time) {
+                        if (processes[i].id < processes[bestIndex].id) {
+                            bestIndex = i;
+                        }
                     }
                 }
             }
