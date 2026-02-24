@@ -409,9 +409,9 @@ void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) 
         if (a.arrival_time != b.arrival_time) return a.arrival_time < b.arrival_time;
         return a.nice_level < b.nice_level; 
     });
-
+ 
     deque<Process*> ready_q;
-    vector<Process*> current_burst_arrivals;
+    deque<Process*> preempted_q;
     vector<Block> gantt_chart;
     
     // Setup metrics
@@ -431,20 +431,19 @@ void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) 
     while (completed_count < n) {
         // Handle arrivals at current ns
         while (process_idx < n && processes[process_idx].arrival_time == elapsed_time) {
-            if (active_process != nullptr) {
-                // CPU is busy, buffer its arrival
-                current_burst_arrivals.push_back(&processes[process_idx]);
-            } else {
-                // CPU is idle, push straight to the ready queue
-                ready_q.push_back(&processes[process_idx]);
-            }
+            ready_q.push_back(&processes[process_idx]);
             process_idx++;
         }
 
         // Assign a process to the CPU if it's currently idle and the queue has waiting processes
-        if (active_process == nullptr && !ready_q.empty()) {
-            active_process = ready_q.front();
-            ready_q.pop_front();
+        if (active_process == nullptr && (!ready_q.empty() || !preempted_q.empty())) {
+            if (!ready_q.empty()) {
+                active_process = ready_q.front();
+                ready_q.pop_front();
+            } else {
+                active_process = preempted_q.front();
+                preempted_q.pop_front();
+            }
             
             current_quantum_used = 0;
             current_block_start = elapsed_time;
@@ -469,15 +468,9 @@ void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) 
             if (is_complete || quantum_expired) {
                 // Fetch new arrivals
                 while (process_idx < n && processes[process_idx].arrival_time == elapsed_time) {
-                    current_burst_arrivals.push_back(&processes[process_idx]);
+                    ready_q.push_back(&processes[process_idx]);
                     process_idx++;
                 }
-
-                // Push new arrivals to front of ready queue
-                for (auto it = current_burst_arrivals.rbegin(); it != current_burst_arrivals.rend(); ++it) {
-                    ready_q.push_front(*it);
-                }
-                current_burst_arrivals.clear(); // Clear buffer for the next quantum
 
                 // Log the execution block to the Gantt chart
                 gantt_chart.push_back({
@@ -497,7 +490,7 @@ void simulate_RR(vector<Process>& processes, int quantum, int test_case_number) 
                     active_process->response_time = active_process->start_time - active_process->arrival_time;
                 } else {
                     // Process is preempted
-                    ready_q.push_back(active_process);
+                    preempted_q.push_back(active_process);
                 }
                 
                 // Clear active process for next iteration
